@@ -24,8 +24,6 @@ fun RoutineTab(
     selectedDay: String,
     onDelete: (String) -> Unit
 ) {
-    val db = FirebaseFirestore.getInstance()
-    val context = LocalContext.current
     var showAddDialog by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -55,7 +53,7 @@ fun RoutineTab(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text("Teacher: ${item.teacher}", color = MaterialTheme.colorScheme.onSurface)
-                                Text("Room: ${item.room}", color = MaterialTheme.colorScheme.onSurface)
+                                Text("Room: ${item.room} | Time: ${item.time}", color = MaterialTheme.colorScheme.onSurface)
                             }
 
                             if (isAdmin) {
@@ -95,6 +93,7 @@ fun AddRoutineDialog(selectedDay: String, onDismiss: () -> Unit) {
     var subject by remember { mutableStateOf("") }
     var teacher by remember { mutableStateOf("") }
     var room by remember { mutableStateOf("") }
+    var time by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -104,6 +103,7 @@ fun AddRoutineDialog(selectedDay: String, onDismiss: () -> Unit) {
                 OutlinedTextField(value = subject, onValueChange = { subject = it }, label = { Text("Subject Name") })
                 OutlinedTextField(value = teacher, onValueChange = { teacher = it }, label = { Text("Teacher Name/Initial") })
                 OutlinedTextField(value = room, onValueChange = { room = it }, label = { Text("Room No.") })
+                OutlinedTextField(value = time, onValueChange = { time = it }, label = { Text("Time (e.g. 10:00 AM)") })
             }
         },
         confirmButton = {
@@ -114,7 +114,9 @@ fun AddRoutineDialog(selectedDay: String, onDismiss: () -> Unit) {
                         "department" to "CSE",
                         "subject" to subject,
                         "teacher" to teacher,
-                        "room" to room
+                        "room" to room,
+                        "time" to time,
+                        "isLive" to false
                     )
                     db.collection("routines").add(data)
                         .addOnSuccessListener {
@@ -143,9 +145,20 @@ fun NoticeTab(noticeList: List<NoticeItem>) {
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(notice.title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            text = notice.author.ifEmpty { "Notice" },
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        if (notice.role.isNotEmpty()) {
+                            Text(text = notice.role, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                        }
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(notice.description, color = MaterialTheme.colorScheme.onSurface)
+                        Text(notice.message, color = MaterialTheme.colorScheme.onSurface)
+                        if (notice.timestamp.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(notice.timestamp, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                        }
                     }
                 }
             }
@@ -164,7 +177,7 @@ fun DirectoryTab(studentList: List<StudentProfile>) {
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text(student.name, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                    Text("ID: ${student.studentId} | Dept: ${student.dept}", color = MaterialTheme.colorScheme.onSurface)
+                    Text("ID: ${student.id} | Dept: ${student.department}", color = MaterialTheme.colorScheme.onSurface)
                     Text("Blood Group: ${student.bloodGroup} | Phone: ${student.phone}", color = MaterialTheme.colorScheme.onSurface)
                 }
             }
