@@ -23,14 +23,28 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme(colorScheme = darkColorScheme()) {
-                Surface(modifier = Modifier.fillMaxSize()) {
+            val appTheme = rememberLiveTheme()
+
+            MaterialTheme(
+                colorScheme = darkColorScheme(
+                    primary = appTheme.primaryColor,
+                    background = appTheme.backgroundColor,
+                    surface = appTheme.cardColor,
+                    onBackground = appTheme.textColor,
+                    onSurface = appTheme.textColor
+                )
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = appTheme.backgroundColor
+                ) {
                     GonoSyncMainScreen()
                 }
             }
@@ -42,13 +56,16 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun GonoSyncMainScreen() {
     val db = FirebaseFirestore.getInstance()
+    val auth = FirebaseAuth.getInstance()
     val context = LocalContext.current
 
     var selectedTab by remember { mutableIntStateOf(0) }
     var selectedDay by remember { mutableStateOf("Sat") }
     var selectedDept by remember { mutableStateOf("CSE") }
 
-    var isAdminLoggedIn by remember { mutableStateOf(false) }
+    var isAdminLoggedIn by remember { mutableStateOf(auth.currentUser != null) }
+    var showLoginDialog by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
 
     val days = listOf("Sat", "Sun", "Mon", "Tue", "Wed", "Thu")
 
@@ -94,8 +111,9 @@ fun GonoSyncMainScreen() {
         )
     }
 
+    val appTheme = rememberLiveTheme()
     val backgroundGradient = Brush.verticalGradient(
-        colors = listOf(Color(0xFF0F172A), Color(0xFF1E1035), Color(0xFF0F172A))
+        colors = listOf(appTheme.backgroundColor, appTheme.cardColor, appTheme.backgroundColor)
     )
 
     Box(modifier = Modifier.fillMaxSize().background(backgroundGradient)) {
@@ -113,26 +131,27 @@ fun GonoSyncMainScreen() {
                                 text = "GonoSync",
                                 fontSize = 28.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = Color(0xFF38BDF8)
+                                color = appTheme.primaryColor
                             )
                             Text(
                                 text = "Gono University • $selectedDept Dept",
                                 fontSize = 12.sp,
-                                color = Color.LightGray
+                                color = appTheme.textColor.copy(alpha = 0.7f)
                             )
                         }
 
                         IconButton(
                             onClick = {
                                 if (isAdminLoggedIn) {
-                                    isAdminLoggedIn = false
-                                    Toast.makeText(context, "Logged Out", Toast.LENGTH_SHORT).show()
+                                    showThemeDialog = true
+                                } else {
+                                    showLoginDialog = true
                                 }
                             }
                         ) {
                             Icon(
                                 imageVector = if (isAdminLoggedIn) Icons.Default.Lock else Icons.Default.Person,
-                                contentDescription = "Admin Login",
+                                contentDescription = "Admin Profile",
                                 tint = if (isAdminLoggedIn) Color(0xFF22C55E) else Color.White
                             )
                         }
@@ -147,7 +166,7 @@ fun GonoSyncMainScreen() {
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(
-                                            if (isSelected) Color(0xFF38BDF8) else Color(0xFF1E293B).copy(alpha = 0.6f)
+                                            if (isSelected) appTheme.primaryColor else Color(0xFF1E293B).copy(alpha = 0.6f)
                                         )
                                         .clickable { selectedDay = day }
                                         .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -164,7 +183,7 @@ fun GonoSyncMainScreen() {
                 }
             },
             bottomBar = {
-                NavigationBar(containerColor = Color(0xFF0F172A).copy(alpha = 0.9f)) {
+                NavigationBar(containerColor = appTheme.cardColor.copy(alpha = 0.9f)) {
                     NavigationBarItem(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
@@ -204,5 +223,23 @@ fun GonoSyncMainScreen() {
                 }
             }
         }
+    }
+
+    // Dialogs
+    if (showLoginDialog) {
+        CustomAdminLoginDialog(
+            onDismiss = { showLoginDialog = false },
+            onLoginSuccess = {
+                showLoginDialog = false
+                isAdminLoggedIn = true
+                Toast.makeText(context, "Admin Logged In Successfully!", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    if (showThemeDialog) {
+        ThemeControlDialog(
+            onDismiss = { showThemeDialog = false }
+        )
     }
 }
