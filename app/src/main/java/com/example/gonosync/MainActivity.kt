@@ -51,16 +51,16 @@ fun GonoSyncMainScreen() {
 
     val routineList = remember {
         mutableStateListOf(
-            RoutineItem(1, "Sat", "CSE", "Structured Programming", "10:00 AM - 11:30 AM", "Room 302", "Dept Teacher A", isLive = true),
-            RoutineItem(2, "Sat", "CSE", "Discrete Math", "11:30 AM - 01:00 PM", "Room 405", "Dept Teacher B"),
-            RoutineItem(3, "Sat", "CSE", "Physics Lab", "02:00 PM - 04:00 PM", "Lab 2 (CSE)", "Lab Assistant")
+            RoutineItem("1", "Sat", "CSE", "Structured Programming", "10:00 AM - 11:30 AM", "Room 302", "Dept Teacher A", isLive = true),
+            RoutineItem("2", "Sat", "CSE", "Discrete Math", "11:30 AM - 01:00 PM", "Room 405", "Dept Teacher B"),
+            RoutineItem("3", "Sat", "CSE", "Physics Lab", "02:00 PM - 04:00 PM", "Lab 2 (CSE)", "Lab Assistant")
         )
     }
 
     val noticeList = remember {
         mutableStateListOf(
-            NoticeItem(1, "Super Admin", "CR / Lead", "Class 302 shifted to Room 405 for today's lecture.", "10:15 AM"),
-            NoticeItem(2, "Dept Office", "Notice", "Midterm exam schedule will be published next week.", "Yesterday")
+            NoticeItem("1", "Super Admin", "CR / Lead", "Class 302 shifted to Room 405 for today's lecture.", "10:15 AM"),
+            NoticeItem("2", "Dept Office", "Notice", "Midterm exam schedule will be published next week.", "Yesterday")
         )
     }
 
