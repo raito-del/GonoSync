@@ -43,8 +43,17 @@ fun RoutineTab(routineList: List<RoutineItem>, isAdmin: Boolean, selectedDay: St
                             ) {
                                 Text(item.subject, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                 if (item.isLive) {
-                                    Badge(containerColor = Color(0xFF22C55E).copy(alpha = 0.2f)) {
-                                        Text("LIVE NOW", color = Color(0xFF22C55E), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    Surface(
+                                        color = Color(0xFF22C55E).copy(alpha = 0.2f),
+                                        shape = RoundedCornerShape(4.dp)
+                                    ) {
+                                        Text(
+                                            "LIVE NOW",
+                                            color = Color(0xFF22C55E),
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
                                     }
                                 }
                             }
