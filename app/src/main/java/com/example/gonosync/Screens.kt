@@ -9,12 +9,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -132,4 +133,84 @@ fun GlassCard(content: @Composable () -> Unit) {
     ) {
         content()
     }
+}
+
+@Composable
+fun AdminLoginDialog(onDismiss: () -> Unit, onSuccess: () -> Unit) {
+    var userId by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var errorMsg by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Super Admin Login", color = Color.White) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = userId, onValueChange = { userId = it }, label = { Text("User ID") })
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text("Password") },
+                    visualTransformation = PasswordVisualTransformation()
+                )
+                if (errorMsg.isNotEmpty()) Text(errorMsg, color = Color.Red, fontSize = 12.sp)
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                if (userId == "01743836672" && password == "nemesis00") onSuccess()
+                else errorMsg = "Invalid User ID or Password"
+            }) { Text("Login") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        containerColor = Color(0xFF1E293B)
+    )
+}
+
+@Composable
+fun AddRoutineDialog(currentDay: String, currentDept: String, onDismiss: () -> Unit, onAdd: (RoutineItem) -> Unit) {
+    var subject by remember { mutableStateOf("") }
+    var time by remember { mutableStateOf("") }
+    var room by remember { mutableStateOf("") }
+    var teacher by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Class ($currentDept - $currentDay)", color = Color.White) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = subject, onValueChange = { subject = it }, label = { Text("Subject") })
+                OutlinedTextField(value = time, onValueChange = { time = it }, label = { Text("Time") })
+                OutlinedTextField(value = room, onValueChange = { room = it }, label = { Text("Room") })
+                OutlinedTextField(value = teacher, onValueChange = { teacher = it }, label = { Text("Teacher") })
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                if (subject.isNotBlank()) onAdd(RoutineItem(day = currentDay, department = currentDept, subject = subject, time = time, room = room, teacher = teacher))
+            }) { Text("Add") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        containerColor = Color(0xFF1E293B)
+    )
+}
+
+@Composable
+fun AddNoticeDialog(onDismiss: () -> Unit, onAdd: (NoticeItem) -> Unit) {
+    var message by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Post Announcement", color = Color.White) },
+        text = {
+            OutlinedTextField(value = message, onValueChange = { message = it }, label = { Text("Notice / Update") }, modifier = Modifier.fillMaxWidth())
+        },
+        confirmButton = {
+            Button(onClick = {
+                if (message.isNotBlank()) onAdd(NoticeItem(author = "Super Admin", role = "CR", message = message, timestamp = "Just Now"))
+            }) { Text("Post") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        containerColor = Color(0xFF1E293B)
+    )
 }
