@@ -16,7 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.firebase.firestore.FirebaseFirestore
 
-// --- Routine Tab ---
+// --- Routine UI ---
 @Composable
 fun RoutineTab(
     routineList: List<RoutineItem>,
@@ -130,7 +130,7 @@ fun AddRoutineDialog(selectedDay: String, onDismiss: () -> Unit) {
     )
 }
 
-// --- Notice Tab ---
+// --- Notice UI ---
 @Composable
 fun NoticeTab(noticeList: List<NoticeItem>) {
     if (noticeList.isEmpty()) {
@@ -166,21 +166,109 @@ fun NoticeTab(noticeList: List<NoticeItem>) {
     }
 }
 
-// --- Directory Tab ---
+// --- Directory UI ---
 @Composable
-fun DirectoryTab(studentList: List<StudentProfile>) {
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        items(studentList) { student ->
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(student.name, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-                    Text("ID: ${student.id} | Dept: ${student.department}", color = MaterialTheme.colorScheme.onSurface)
-                    Text("Blood Group: ${student.bloodGroup} | Phone: ${student.phone}", color = MaterialTheme.colorScheme.onSurface)
+fun DirectoryTab(
+    studentList: List<StudentProfile>,
+    isAdmin: Boolean,
+    onDelete: (String) -> Unit
+) {
+    var showAddDialog by remember { mutableStateOf(false) }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (studentList.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No student info found", color = Color.White)
+            }
+        } else {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(studentList) { student ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(student.name, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                                Text("ID: ${student.id} | Dept: ${student.department}", color = MaterialTheme.colorScheme.onSurface)
+                                Text("Blood Group: ${student.bloodGroup} | Phone: ${student.phone}", color = MaterialTheme.colorScheme.onSurface)
+                            }
+
+                            if (isAdmin) {
+                                IconButton(onClick = { onDelete(student.id) }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Delete Student", tint = Color.Red)
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
+
+        if (isAdmin) {
+            FloatingActionButton(
+                onClick = { showAddDialog = true },
+                containerColor = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(bottom = 16.dp, end = 8.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add Student", tint = Color.Black)
+            }
+        }
     }
+
+    if (showAddDialog) {
+        AddStudentDialog(onDismiss = { showAddDialog = false })
+    }
+}
+
+@Composable
+fun AddStudentDialog(onDismiss: () -> Unit) {
+    val db = FirebaseFirestore.getInstance()
+    val context = LocalContext.current
+
+    var name by remember { mutableStateOf("") }
+    var studentId by remember { mutableStateOf("") }
+    var department by remember { mutableStateOf("CSE") }
+    var bloodGroup by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Student Info") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
+                OutlinedTextField(value = studentId, onValueChange = { studentId = it }, label = { Text("Student ID") })
+                OutlinedTextField(value = department, onValueChange = { department = it }, label = { Text("Department") })
+                OutlinedTextField(value = bloodGroup, onValueChange = { bloodGroup = it }, label = { Text("Blood Group") })
+                OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone Number") })
+            }
+        },
+        confirmButton = {
+            Button(onClick = {
+                if (name.isNotEmpty() && studentId.isNotEmpty()) {
+                    val data = hashMapOf(
+                        "name" to name,
+                        "department" to department,
+                        "bloodGroup" to bloodGroup,
+                        "phone" to phone
+                    )
+                    db.collection("students").document(studentId).set(data)
+                        .addOnSuccessListener {
+                            Toast.makeText(context, "Student Added!", Toast.LENGTH_SHORT).show()
+                            onDismiss()
+                        }
+                }
+            }) { Text("Save") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
