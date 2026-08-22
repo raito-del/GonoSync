@@ -4,20 +4,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,24 +23,13 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-data class RoutineItem(
-    val id: Long = System.currentTimeMillis(),
-    val day: String,
-    val department: String,
-    val subject: String,
-    val time: String,
-    val room: String,
-    val teacher: String,
-    val isLive: Boolean = false
-)
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    GonoSyncUltimateApp()
+                    GonoSyncMainScreen()
                 }
             }
         }
@@ -56,21 +38,38 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun GonoSyncUltimateApp() {
-    val days = listOf("Sat", "Sun", "Mon", "Tue", "Wed", "Thu")
+fun GonoSyncMainScreen() {
+    var selectedTab by remember { mutableIntStateOf(0) }
     var selectedDay by remember { mutableStateOf("Sat") }
     var selectedDept by remember { mutableStateOf("CSE") }
-    
+
     var isAdminLoggedIn by remember { mutableStateOf(false) }
     var showLoginDialog by remember { mutableStateOf(false) }
-    var showAddDialog by remember { mutableStateOf(false) }
+    var showAddRoutineDialog by remember { mutableStateOf(false) }
+    var showAddNoticeDialog by remember { mutableStateOf(false) }
+
+    val days = listOf("Sat", "Sun", "Mon", "Tue", "Wed", "Thu")
 
     val routineList = remember {
         mutableStateListOf(
             RoutineItem(1, "Sat", "CSE", "Structured Programming", "10:00 AM - 11:30 AM", "Room 302", "Dept Teacher A", isLive = true),
             RoutineItem(2, "Sat", "CSE", "Discrete Math", "11:30 AM - 01:00 PM", "Room 405", "Dept Teacher B"),
-            RoutineItem(3, "Sat", "CSE", "Physics Lab", "02:00 PM - 04:00 PM", "Lab 2 (CSE)", "Lab Assistant"),
-            RoutineItem(4, "Sun", "CSE", "Data Structure", "09:00 AM - 10:30 AM", "Room 301", "Dept Teacher C")
+            RoutineItem(3, "Sat", "CSE", "Physics Lab", "02:00 PM - 04:00 PM", "Lab 2 (CSE)", "Lab Assistant")
+        )
+    }
+
+    val noticeList = remember {
+        mutableStateListOf(
+            NoticeItem(1, "Super Admin", "CR / Lead", "Class 302 shifted to Room 405 for today's lecture.", "10:15 AM"),
+            NoticeItem(2, "Dept Office", "Notice", "Midterm exam schedule will be published next week.", "Yesterday")
+        )
+    }
+
+    val studentList = remember {
+        listOf(
+            StudentProfile("231-15-001", "Sadnan Ahmed", "CSE", "O+", "01743836672"),
+            StudentProfile("231-15-002", "Tanvir Hasan", "CSE", "A+", "01800000000"),
+            StudentProfile("231-15-003", "Rahat Hossain", "CSE", "B+", "01900000000")
         )
     }
 
@@ -91,62 +90,85 @@ fun GonoSyncUltimateApp() {
                         Column {
                             Text(
                                 text = "GonoSync",
-                                fontSize = 30.sp,
+                                fontSize = 28.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color(0xFF38BDF8)
                             )
                             Text(
                                 text = "Gono University • $selectedDept Dept",
-                                fontSize = 13.sp,
+                                fontSize = 12.sp,
                                 color = Color.LightGray
                             )
                         }
-                        
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(
-                                onClick = { 
-                                    if (isAdminLoggedIn) isAdminLoggedIn = false 
-                                    else showLoginDialog = true 
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = if (isAdminLoggedIn) Icons.Default.Lock else Icons.Default.Person,
-                                    contentDescription = "Admin Login",
-                                    tint = if (isAdminLoggedIn) Color(0xFF22C55E) else Color.White
-                                )
+
+                        IconButton(
+                            onClick = {
+                                if (isAdminLoggedIn) isAdminLoggedIn = false
+                                else showLoginDialog = true
                             }
+                        ) {
+                            Icon(
+                                imageVector = if (isAdminLoggedIn) Icons.Default.Lock else Icons.Default.Person,
+                                contentDescription = "Admin Login",
+                                tint = if (isAdminLoggedIn) Color(0xFF22C55E) else Color.White
+                            )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Day Selector Tabs
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(days) { day ->
-                            val isSelected = day == selectedDay
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(
-                                        if (isSelected) Color(0xFF38BDF8) else Color(0xFF1E293B).copy(alpha = 0.6f)
+                    if (selectedTab == 0) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(days) { day ->
+                                val isSelected = day == selectedDay
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(
+                                            if (isSelected) Color(0xFF38BDF8) else Color(0xFF1E293B).copy(alpha = 0.6f)
+                                        )
+                                        .clickable { selectedDay = day }
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        text = day,
+                                        color = if (isSelected) Color.Black else Color.White,
+                                        fontWeight = FontWeight.Bold
                                     )
-                                    .clickable { selectedDay = day }
-                                    .padding(horizontal = 18.dp, vertical = 10.dp)
-                            ) {
-                                Text(
-                                    text = day,
-                                    color = if (isSelected) Color.Black else Color.White,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                }
                             }
                         }
                     }
                 }
             },
+            bottomBar = {
+                NavigationBar(containerColor = Color(0xFF0F172A).copy(alpha = 0.9f)) {
+                    NavigationBarItem(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        icon = { Icon(Icons.Default.DateRange, contentDescription = "Routine") },
+                        label = { Text("Routine") }
+                    )
+                    NavigationBarItem(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        icon = { Icon(Icons.Default.Notifications, contentDescription = "Notices") },
+                        label = { Text("Notices") }
+                    )
+                    NavigationBarItem(
+                        selected = selectedTab == 2,
+                        onClick = { selectedTab = 2 },
+                        icon = { Icon(Icons.Default.AccountBox, contentDescription = "Directory") },
+                        label = { Text("Directory") }
+                    )
+                }
+            },
             floatingActionButton = {
                 if (isAdminLoggedIn) {
                     FloatingActionButton(
-                        onClick = { showAddDialog = true },
+                        onClick = {
+                            if (selectedTab == 0) showAddRoutineDialog = true
+                            else if (selectedTab == 1) showAddNoticeDialog = true
+                        },
                         containerColor = Color(0xFF38BDF8)
                     ) {
                         Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.Black)
@@ -154,54 +176,25 @@ fun GonoSyncUltimateApp() {
                 }
             }
         ) { padding ->
-            val filteredList = routineList.filter { it.day == selectedDay && it.department == selectedDept }
-
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
                     .padding(horizontal = 16.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "$selectedDay Schedule",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
+                when (selectedTab) {
+                    0 -> RoutineTab(
+                        routineList = routineList.filter { it.day == selectedDay && it.department == selectedDept },
+                        isAdmin = isAdminLoggedIn,
+                        selectedDay = selectedDay,
+                        onDelete = { item -> routineList.remove(item) }
                     )
-                    if (isAdminLoggedIn) {
-                        Text(
-                            text = "● Admin Mode Active",
-                            fontSize = 12.sp,
-                            color = Color(0xFF22C55E),
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-
-                if (filteredList.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("No classes scheduled for $selectedDay", color = Color.Gray)
-                    }
-                } else {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        items(filteredList, key = { it.id }) { item ->
-                            GlassmorphicCard(
-                                item = item,
-                                isAdmin = isAdminLoggedIn,
-                                onDelete = { routineList.remove(item) }
-                            )
-                        }
-                    }
+                    1 -> NoticeTab(noticeList = noticeList)
+                    2 -> DirectoryTab(studentList = studentList)
                 }
             }
         }
 
-        // Login Dialog
         if (showLoginDialog) {
             AdminLoginDialog(
                 onDismiss = { showLoginDialog = false },
@@ -212,71 +205,26 @@ fun GonoSyncUltimateApp() {
             )
         }
 
-        // Add Routine Dialog
-        if (showAddDialog) {
+        if (showAddRoutineDialog) {
             AddRoutineDialog(
                 currentDay = selectedDay,
                 currentDept = selectedDept,
-                onDismiss = { showAddDialog = false },
+                onDismiss = { showAddRoutineDialog = false },
                 onAdd = { newItem ->
                     routineList.add(newItem)
-                    showAddDialog = false
+                    showAddRoutineDialog = false
                 }
             )
         }
-    }
-}
 
-@Composable
-fun GlassmorphicCard(item: RoutineItem, isAdmin: Boolean, onDelete: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFF1E293B).copy(alpha = 0.5f))
-            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(20.dp))
-            .padding(16.dp)
-    ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = item.subject,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                if (item.isLive) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFF22C55E).copy(alpha = 0.2f))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text("LIVE NOW", color = Color(0xFF22C55E), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    }
+        if (showAddNoticeDialog) {
+            AddNoticeDialog(
+                onDismiss = { showAddNoticeDialog = false },
+                onAdd = { newNotice ->
+                    noticeList.add(0, newNotice)
+                    showAddNoticeDialog = false
                 }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = "⏰ ${item.time}", fontSize = 14.sp, color = Color(0xFFCBD5E1))
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = "📍 ${item.room}  •  👨‍🏫 ${item.teacher}", fontSize = 13.sp, color = Color.Gray)
-                if (isAdmin) {
-                    IconButton(onClick = onDelete) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFEF4444))
-                    }
-                }
-            }
+            )
         }
     }
 }
@@ -292,38 +240,23 @@ fun AdminLoginDialog(onDismiss: () -> Unit, onSuccess: () -> Unit) {
         title = { Text("Super Admin Login", color = Color.White) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = userId,
-                    onValueChange = { userId = it },
-                    label = { Text("User ID / Phone") }
-                )
+                OutlinedTextField(value = userId, onValueChange = { userId = it }, label = { Text("User ID") })
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
                     label = { Text("Password") },
                     visualTransformation = PasswordVisualTransformation()
                 )
-                if (errorMsg.isNotEmpty()) {
-                    Text(errorMsg, color = Color.Red, fontSize = 12.sp)
-                }
+                if (errorMsg.isNotEmpty()) Text(errorMsg, color = Color.Red, fontSize = 12.sp)
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    if (userId == "01743836672" && password == "nemesis00") {
-                        onSuccess()
-                    } else {
-                        errorMsg = "ভুল ID অথবা Password!"
-                    }
-                }
-            ) {
-                Text("Login")
-            }
+            Button(onClick = {
+                if (userId == "01743836672" && password == "nemesis00") onSuccess()
+                else errorMsg = "Invalid User ID or Password"
+            }) { Text("Login") }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
         containerColor = Color(0xFF1E293B)
     )
 }
@@ -337,38 +270,41 @@ fun AddRoutineDialog(currentDay: String, currentDept: String, onDismiss: () -> U
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("নতুন ক্লাস অ্যাড করুন ($currentDay)", color = Color.White) },
+        title = { Text("Add Class ($currentDay)", color = Color.White) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = subject, onValueChange = { subject = it }, label = { Text("Subject Name") })
-                OutlinedTextField(value = time, onValueChange = { time = it }, label = { Text("Time (e.g. 10:00 AM)") })
-                OutlinedTextField(value = room, onValueChange = { room = it }, label = { Text("Room No") })
-                OutlinedTextField(value = teacher, onValueChange = { teacher = it }, label = { Text("Teacher Name") })
+                OutlinedTextField(value = subject, onValueChange = { subject = it }, label = { Text("Subject") })
+                OutlinedTextField(value = time, onValueChange = { time = it }, label = { Text("Time") })
+                OutlinedTextField(value = room, onValueChange = { room = it }, label = { Text("Room") })
+                OutlinedTextField(value = teacher, onValueChange = { teacher = it }, label = { Text("Teacher") })
             }
         },
         confirmButton = {
-            Button(
-                onClick = {
-                    if (subject.isNotBlank()) {
-                        onAdd(
-                            RoutineItem(
-                                day = currentDay,
-                                department = currentDept,
-                                subject = subject,
-                                time = time,
-                                room = room,
-                                teacher = teacher
-                            )
-                        )
-                    }
-                }
-            ) {
-                Text("Add Class")
-            }
+            Button(onClick = {
+                if (subject.isNotBlank()) onAdd(RoutineItem(day = currentDay, department = currentDept, subject = subject, time = time, room = room, teacher = teacher))
+            }) { Text("Add") }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        containerColor = Color(0xFF1E293B)
+    )
+}
+
+@Composable
+fun AddNoticeDialog(onDismiss: () -> Unit, onAdd: (NoticeItem) -> Unit) {
+    var message by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Post Announcement", color = Color.White) },
+        text = {
+            OutlinedTextField(value = message, onValueChange = { message = it }, label = { Text("Notice / Update") }, modifier = Modifier.fillMaxWidth())
         },
+        confirmButton = {
+            Button(onClick = {
+                if (message.isNotBlank()) onAdd(NoticeItem(author = "Super Admin", role = "CR", message = message, timestamp = "Just Now"))
+            }) { Text("Post") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
         containerColor = Color(0xFF1E293B)
     )
 }
