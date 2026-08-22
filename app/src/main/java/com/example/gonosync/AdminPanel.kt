@@ -1,5 +1,6 @@
 package com.example.gonosync
 
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -12,7 +13,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 
 @Composable
-fun AdminLoginDialog(
+fun CustomAdminLoginDialog(
     onDismiss: () -> Unit,
     onLoginSuccess: () -> Unit
 ) {
@@ -106,7 +107,12 @@ fun ThemeControlDialog(
     )
 }
 
-private fun updateTheme(db: FirebaseFirestore, themeMode: String, context: android.content.Context, onDismiss: () -> Unit) {
+private fun updateTheme(
+    db: FirebaseFirestore, 
+    themeMode: String, 
+    context: Context, 
+    onDismiss: () -> Unit
+) {
     val data = hashMapOf("theme_mode" to themeMode)
     db.collection("settings").document("app_theme")
         .set(data)
