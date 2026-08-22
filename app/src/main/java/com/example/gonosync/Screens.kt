@@ -1,75 +1,136 @@
 package com.example.gonosync
 
+import android.widget.Toast
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 
+// --- Routine Screen ---
 @Composable
-fun RoutineTab(routineList: List<RoutineItem>, isAdmin: Boolean, selectedDay: String, onDelete: (RoutineItem) -> Unit) {
-    Column {
-        Text(
-            text = "$selectedDay Schedule",
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White,
-            modifier = Modifier.padding(vertical = 8.dp)
-        )
-        if (routineList.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("No classes scheduled", color = Color.Gray)
+fun RoutineScreen(
+    themeColors: AppThemeColors,
+    selectedDay: String,
+    onDaySelected: (String) -> Unit
+) {
+    val db = FirebaseFirestore.getInstance()
+    val auth = FirebaseAuth.getInstance()
+    val context = LocalContext.current
+
+    val days = listOf("Sat", "Sun", "Mon", "Tue", "Wed", "Thu")
+    var routineList by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    var showAddRoutineDialog by remember { mutableStateOf(false) }
+
+    val isAdmin = auth.currentUser != null
+
+    // Load Routine Data based on Selected Day
+    DisposableEffect(selectedDay) {
+        val listener = db.collection("routines")
+            .whereEqualTo("day", selectedDay)
+            .addSnapshotListener { snapshot, _ ->
+                if (snapshot != null) {
+                    val list = mutableListOf<Map<String, Any>>()
+                    for (doc in snapshot.documents) {
+                        val data = doc.data?.toMutableMap() ?: mutableMapOf()
+                        data["id"] = doc.id
+                        list.add(data)
+                    }
+                    routineList = list
+                }
             }
-        } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(routineList, key = { it.id }) { item ->
-                    GlassCard {
-                        Column {
+        onDispose { listener.remove() }
+    }
+
+    Scaffold(
+        containerColor = themeColors.backgroundColor,
+        floatingActionButton = {
+            if (isAdmin) {
+                FloatingActionButton(
+                    onClick = { showAddRoutineDialog = true },
+                    containerColor = themeColors.primaryColor
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Class", tint = Color.White)
+                }
+            }
+        }
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .padding(16.dp)
+        ) {
+            // Day Selector Tabs
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                days.forEach { day ->
+                    FilterChip(
+                        selected = selectedDay == day,
+                        onClick = { onDaySelected(day) },
+                        label = { Text(day, color = if (selectedDay == day) Color.White else themeColors.textColor) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = themeColors.primaryColor,
+                            containerColor = themeColors.cardColor
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Routine List
+            if (routineList.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No classes scheduled for $selectedDay", color = themeColors.textColor)
+                }
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(routineList) { item ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = themeColors.cardColor),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(item.subject, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                                if (item.isLive) {
-                                    Surface(
-                                        color = Color(0xFF22C55E).copy(alpha = 0.2f),
-                                        shape = RoundedCornerShape(4.dp)
-                                    ) {
-                                        Text(
-                                            "LIVE NOW",
-                                            color = Color(0xFF22C55E),
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
-                                    }
-                                }
-                            }
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text("⏰ ${item.time}", fontSize = 14.sp, color = Color.LightGray)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("📍 ${item.room}  •  👨‍🏫 ${item.teacher}", fontSize = 13.sp, color = Color.Gray)
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = item["subject"].toString(),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = themeColors.primaryColor
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text("Teacher: ${item["teacher"]}", color = themeColors.textColor)
+                                    Text("Room: ${item["room"]}", color = themeColors.textColor)
+                                }
+
                                 if (isAdmin) {
-                                    IconButton(onClick = { onDelete(item) }) {
-                                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color(0xFFEF4444))
+                                    IconButton(onClick = {
+                                        val docId = item["id"].toString()
+                                        db.collection("routines").document(docId).delete()
+                                            .addOnSuccessListener {
+                                                Toast.makeText(context, "Class Removed", Toast.LENGTH_SHORT).show()
+                                            }
+                                    }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
                                     }
                                 }
                             }
@@ -79,138 +140,177 @@ fun RoutineTab(routineList: List<RoutineItem>, isAdmin: Boolean, selectedDay: St
             }
         }
     }
-}
 
-@Composable
-fun NoticeTab(noticeList: List<NoticeItem>) {
-    Column {
-        Text("Announcements", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.padding(vertical = 8.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(noticeList, key = { it.id }) { notice ->
-                GlassCard {
-                    Column {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(notice.author, fontWeight = FontWeight.Bold, color = Color(0xFF38BDF8))
-                            Text(notice.timestamp, fontSize = 12.sp, color = Color.Gray)
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(notice.message, color = Color.White, fontSize = 14.sp)
-                    }
-                }
-            }
-        }
+    if (showAddRoutineDialog) {
+        AddRoutineDialog(
+            selectedDay = selectedDay,
+            onDismiss = { showAddRoutineDialog = false }
+        )
     }
 }
 
 @Composable
-fun DirectoryTab(studentList: List<StudentProfile>) {
-    Column {
-        Text("Batch Directory", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.padding(vertical = 8.dp))
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            items(studentList) { student ->
-                GlassCard {
-                    Column {
-                        Text(student.name, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text("ID: ${student.id}  •  Blood Group: ${student.bloodGroup}", fontSize = 13.sp, color = Color.LightGray)
-                        Text("📞 ${student.phone}", fontSize = 13.sp, color = Color(0xFF38BDF8))
-                    }
-                }
-            }
-        }
-    }
-}
+fun AddRoutineDialog(selectedDay: String, onDismiss: () -> Unit) {
+    val db = FirebaseFirestore.getInstance()
+    val context = LocalContext.current
 
-@Composable
-fun GlassCard(content: @Composable () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF1E293B).copy(alpha = 0.5f))
-            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
-            .padding(16.dp)
-    ) {
-        content()
-    }
-}
-
-@Composable
-fun AdminLoginDialog(onDismiss: () -> Unit, onSuccess: () -> Unit) {
-    var userId by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var errorMsg by remember { mutableStateOf("") }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Super Admin Login", color = Color.White) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = userId, onValueChange = { userId = it }, label = { Text("User ID") })
-                OutlinedTextField(
-                    value = password,
-                    onValueChange = { password = it },
-                    label = { Text("Password") },
-                    visualTransformation = PasswordVisualTransformation()
-                )
-                if (errorMsg.isNotEmpty()) Text(errorMsg, color = Color.Red, fontSize = 12.sp)
-            }
-        },
-        confirmButton = {
-            Button(onClick = {
-                if (userId == "01743836672" && password == "nemesis00") onSuccess()
-                else errorMsg = "Invalid User ID or Password"
-            }) { Text("Login") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-        containerColor = Color(0xFF1E293B)
-    )
-}
-
-@Composable
-fun AddRoutineDialog(currentDay: String, currentDept: String, onDismiss: () -> Unit, onAdd: (RoutineItem) -> Unit) {
     var subject by remember { mutableStateOf("") }
-    var time by remember { mutableStateOf("") }
-    var room by remember { mutableStateOf("") }
     var teacher by remember { mutableStateOf("") }
+    var room by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Class ($currentDept - $currentDay)", color = Color.White) },
+        title = { Text("Add Class for $selectedDay") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = subject, onValueChange = { subject = it }, label = { Text("Subject") })
-                OutlinedTextField(value = time, onValueChange = { time = it }, label = { Text("Time") })
-                OutlinedTextField(value = room, onValueChange = { room = it }, label = { Text("Room") })
-                OutlinedTextField(value = teacher, onValueChange = { teacher = it }, label = { Text("Teacher") })
+                OutlinedTextField(value = subject, onValueChange = { subject = it }, label = { Text("Subject Name") })
+                OutlinedTextField(value = teacher, onValueChange = { teacher = it }, label = { Text("Teacher Initial/Name") })
+                OutlinedTextField(value = room, onValueChange = { room = it }, label = { Text("Room No.") })
             }
         },
         confirmButton = {
             Button(onClick = {
-                if (subject.isNotBlank()) onAdd(RoutineItem(day = currentDay, department = currentDept, subject = subject, time = time, room = room, teacher = teacher))
-            }) { Text("Add") }
+                if (subject.isNotEmpty() && room.isNotEmpty()) {
+                    val classData = hashMapOf(
+                        "day" to selectedDay,
+                        "subject" to subject,
+                        "teacher" to teacher,
+                        "room" to room,
+                        "department" to "CSE"
+                    )
+                    db.collection("routines").add(classData)
+                        .addOnSuccessListener {
+                            Toast.makeText(context, "Added Successfully!", Toast.LENGTH_SHORT).show()
+                            onDismiss()
+                        }
+                }
+            }) { Text("Save") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-        containerColor = Color(0xFF1E293B)
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
 
+// --- Directory Screen ---
 @Composable
-fun AddNoticeDialog(onDismiss: () -> Unit, onAdd: (NoticeItem) -> Unit) {
-    var message by remember { mutableStateOf("") }
+fun DirectoryScreen(themeColors: AppThemeColors) {
+    val db = FirebaseFirestore.getInstance()
+    val auth = FirebaseAuth.getInstance()
+    val context = LocalContext.current
+
+    var studentList by remember { mutableStateOf<List<Map<String, Any>>>(emptyList()) }
+    var showAddStudentDialog by remember { mutableStateOf(false) }
+    val isAdmin = auth.currentUser != null
+
+    DisposableEffect(Unit) {
+        val listener = db.collection("students")
+            .addSnapshotListener { snapshot, _ ->
+                if (snapshot != null) {
+                    val list = mutableListOf<Map<String, Any>>()
+                    for (doc in snapshot.documents) {
+                        val data = doc.data?.toMutableMap() ?: mutableMapOf()
+                        data["id"] = doc.id
+                        list.add(data)
+                    }
+                    studentList = list
+                }
+            }
+        onDispose { listener.remove() }
+    }
+
+    Scaffold(
+        containerColor = themeColors.backgroundColor,
+        floatingActionButton = {
+            if (isAdmin) {
+                FloatingActionButton(
+                    onClick = { showAddStudentDialog = true },
+                    containerColor = themeColors.primaryColor
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Add Student", tint = Color.White)
+                }
+            }
+        }
+    ) { padding ->
+        Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
+            Text("Student & Teacher Directory", style = MaterialTheme.typography.titleLarge, color = themeColors.textColor)
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (studentList.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No Directory Information Found", color = themeColors.textColor)
+                }
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(studentList) { student ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = themeColors.cardColor),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(student["name"].toString(), style = MaterialTheme.typography.titleMedium, color = themeColors.primaryColor)
+                                    Text("ID: ${student["student_id"]}", color = themeColors.textColor)
+                                    Text("Phone: ${student["phone"]}", color = themeColors.textColor)
+                                }
+                                if (isAdmin) {
+                                    IconButton(onClick = {
+                                        val id = student["id"].toString()
+                                        db.collection("students").document(id).delete()
+                                    }) {
+                                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showAddStudentDialog) {
+        AddStudentDialog(onDismiss = { showAddStudentDialog = false })
+    }
+}
+
+@Composable
+fun AddStudentDialog(onDismiss: () -> Unit) {
+    val db = FirebaseFirestore.getInstance()
+    val context = LocalContext.current
+
+    var name by remember { mutableStateOf("") }
+    var studentId by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Post Announcement", color = Color.White) },
+        title = { Text("Add Directory Info") },
         text = {
-            OutlinedTextField(value = message, onValueChange = { message = it }, label = { Text("Notice / Update") }, modifier = Modifier.fillMaxWidth())
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
+                OutlinedTextField(value = studentId, onValueChange = { studentId = it }, label = { Text("ID / Designation") })
+                OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("Phone Number") })
+            }
         },
         confirmButton = {
             Button(onClick = {
-                if (message.isNotBlank()) onAdd(NoticeItem(author = "Super Admin", role = "CR", message = message, timestamp = "Just Now"))
-            }) { Text("Post") }
+                if (name.isNotEmpty()) {
+                    val data = hashMapOf(
+                        "name" to name,
+                        "student_id" to studentId,
+                        "phone" to phone
+                    )
+                    db.collection("students").add(data)
+                        .addOnSuccessListener {
+                            Toast.makeText(context, "Added to Directory!", Toast.LENGTH_SHORT).show()
+                            onDismiss()
+                        }
+                }
+            }) { Text("Save") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
-        containerColor = Color(0xFF1E293B)
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
