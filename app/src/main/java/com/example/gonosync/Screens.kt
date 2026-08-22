@@ -16,31 +16,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.google.firebase.firestore.FirebaseFirestore
 
-// --- Data Models ---
-data class RoutineItem(
-    val id: String = "",
-    val day: String = "",
-    val department: String = "",
-    val subject: String = "",
-    val teacher: String = "",
-    val room: String = ""
-)
-
-data class NoticeItem(
-    val id: String = "",
-    val title: String = "",
-    val description: String = "",
-    val date: String = ""
-)
-
-data class StudentProfile(
-    val studentId: String = "",
-    val name: String = "",
-    val dept: String = "",
-    val bloodGroup: String = "",
-    val phone: String = ""
-)
-
 // --- Routine Tab ---
 @Composable
 fun RoutineTab(
@@ -84,12 +59,7 @@ fun RoutineTab(
                             }
 
                             if (isAdmin) {
-                                IconButton(onClick = {
-                                    db.collection("routines").document(item.id).delete()
-                                        .addOnSuccessListener {
-                                            Toast.makeText(context, "Class Removed", Toast.LENGTH_SHORT).show()
-                                        }
-                                }) {
+                                IconButton(onClick = { onDelete(item.id) }) {
                                     Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Red)
                                 }
                             }
