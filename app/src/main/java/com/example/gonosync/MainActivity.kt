@@ -69,11 +69,11 @@ fun GonoSyncMainScreen() {
 
     val days = listOf("Sat", "Sun", "Mon", "Tue", "Wed", "Thu")
 
-    // Firebase Dynamic Lists
     val routineList = remember { mutableStateListOf<RoutineItem>() }
     val noticeList = remember { mutableStateListOf<NoticeItem>() }
+    val studentList = remember { mutableStateListOf<StudentProfile>() }
 
-    // Fetch Routine from Firebase Firestore
+    // Firebase Routine Fetch
     LaunchedEffect(selectedDay, selectedDept) {
         db.collection("routines")
             .whereEqualTo("day", selectedDay)
@@ -89,7 +89,7 @@ fun GonoSyncMainScreen() {
             }
     }
 
-    // Fetch Notices from Firebase Firestore
+    // Firebase Notice Fetch
     LaunchedEffect(Unit) {
         db.collection("notices")
             .addSnapshotListener { snapshot, _ ->
@@ -103,12 +103,18 @@ fun GonoSyncMainScreen() {
             }
     }
 
-    val studentList = remember {
-        listOf(
-            StudentProfile("231-15-001", "Sadnan Ahmed", "CSE", "O+", "01743836672"),
-            StudentProfile("231-15-002", "Tanvir Hasan", "CSE", "A+", "01800000000"),
-            StudentProfile("231-15-003", "Rahat Hossain", "CSE", "B+", "01900000000")
-        )
+    // Firebase Student Directory Fetch
+    LaunchedEffect(Unit) {
+        db.collection("students")
+            .addSnapshotListener { snapshot, _ ->
+                if (snapshot != null) {
+                    studentList.clear()
+                    for (doc in snapshot.documents) {
+                        val item = doc.toObject(StudentProfile::class.java)?.copy(id = doc.id)
+                        if (item != null) studentList.add(item)
+                    }
+                }
+            }
     }
 
     val appTheme = rememberLiveTheme()
@@ -224,20 +230,28 @@ fun GonoSyncMainScreen() {
                         }
                     )
                     1 -> NoticeTab(noticeList = noticeList)
-                    2 -> DirectoryTab(studentList = studentList)
+                    2 -> DirectoryTab(
+                        studentList = studentList,
+                        isAdmin = isAdminLoggedIn,
+                        onDelete = { docId ->
+                            db.collection("students").document(docId).delete()
+                                .addOnSuccessListener {
+                                    Toast.makeText(context, "Student Removed", Toast.LENGTH_SHORT).show()
+                                }
+                        }
+                    )
                 }
             }
         }
     }
 
-    // Dialogs
     if (showLoginDialog) {
         CustomAdminLoginDialog(
             onDismiss = { showLoginDialog = false },
             onLoginSuccess = {
                 showLoginDialog = false
                 isAdminLoggedIn = true
-                Toast.makeText(context, "Admin Logged In Successfully!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Admin Logged In!", Toast.LENGTH_SHORT).show()
             }
         )
     }
