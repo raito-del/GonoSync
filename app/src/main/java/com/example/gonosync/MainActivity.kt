@@ -216,7 +216,12 @@ fun GonoSyncMainScreen() {
                         routineList = routineList,
                         isAdmin = isAdminLoggedIn,
                         selectedDay = selectedDay,
-                        onDelete = { }
+                        onDelete = { docId ->
+                            db.collection("routines").document(docId).delete()
+                                .addOnSuccessListener {
+                                    Toast.makeText(context, "Class Removed", Toast.LENGTH_SHORT).show()
+                                }
+                        }
                     )
                     1 -> NoticeTab(noticeList = noticeList)
                     2 -> DirectoryTab(studentList = studentList)
