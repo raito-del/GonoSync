@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "483111503532",
+    "project_id": "gonosync-cd434",
+    "storage_bucket": "gonosync-cd434.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:483111503532:android:7cbc329df23c5d3d6bc109",
+        "android_client_info": {
+          "package_name": "com.example.gonosync"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDnqVEX9OSY32WstCW8hP8MZ7J5RgCwBco"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
