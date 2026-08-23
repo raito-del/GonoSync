@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -217,30 +218,43 @@ fun GonoSyncMainScreen() {
                     .padding(padding)
                     .padding(horizontal = 16.dp)
             ) {
-                when (selectedTab) {
-                    0 -> RoutineTab(
-                        routineList = routineList,
-                        isAdmin = isAdminLoggedIn,
-                        selectedDay = selectedDay,
-                        onDelete = { docId ->
-                            db.collection("routines").document(docId).delete()
-                                .addOnSuccessListener {
-                                    Toast.makeText(context, "Class Removed", Toast.LENGTH_SHORT).show()
-                                }
-                        }
-                    )
-                    1 -> NoticeTab(noticeList = noticeList)
-                    2 -> DirectoryTab(
-                        studentList = studentList,
-                        isAdmin = isAdminLoggedIn,
-                        onDelete = { docId ->
-                            db.collection("students").document(docId).delete()
-                                .addOnSuccessListener {
-                                    Toast.makeText(context, "Student Removed", Toast.LENGTH_SHORT).show()
-                                }
-                        }
-                    )
+                Box(modifier = Modifier.weight(1f)) {
+                    when (selectedTab) {
+                        0 -> RoutineTab(
+                            routineList = routineList,
+                            isAdmin = isAdminLoggedIn,
+                            selectedDay = selectedDay,
+                            onDelete = { docId ->
+                                db.collection("routines").document(docId).delete()
+                                    .addOnSuccessListener {
+                                        Toast.makeText(context, "Class Removed", Toast.LENGTH_SHORT).show()
+                                    }
+                            }
+                        )
+                        1 -> NoticeTab(noticeList = noticeList)
+                        2 -> DirectoryTab(
+                            studentList = studentList,
+                            isAdmin = isAdminLoggedIn,
+                            onDelete = { docId ->
+                                db.collection("students").document(docId).delete()
+                                    .addOnSuccessListener {
+                                        Toast.makeText(context, "Student Removed", Toast.LENGTH_SHORT).show()
+                                    }
+                            }
+                        )
+                    }
                 }
+
+                // Created by Sadnan Ahmed Credit Section
+                Text(
+                    text = "Created by Sadnan Ahmed",
+                    fontSize = 12.sp,
+                    fontStyle = FontStyle.Italic,
+                    color = appTheme.textColor.copy(alpha = 0.5f),
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(vertical = 8.dp)
+                )
             }
         }
     }
